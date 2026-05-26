@@ -25,7 +25,7 @@ class UserRepositories {
 
   async getUserById(id) {
     const query = {
-      text: 'SELECT id, username, first_name, last_name, email, goal, bmi, bmi_category, age FROM users WHERE id = $1',
+      text: 'SELECT id, username, first_name, last_name, email, gender, weight_kg, height_cm, goal, bmi, bmi_category, age FROM users WHERE id = $1',
       values: [id],
     };
     const user = await this.pool.query(query);
