@@ -1,13 +1,20 @@
 import { Pool } from 'pg';
 import { nanoid } from 'nanoid';
 
+function toLocalDateStr(date = new Date()) {
+  const y = date.getFullYear();
+  const m = String(date.getMonth() + 1).padStart(2, '0');
+  const d = String(date.getDate()).padStart(2, '0');
+  return `${y}-${m}-${d}`;
+}
+
 class ProgressRepositories {
   constructor() {
     this.pool = new Pool();
   }
 
   async getProgressToday(userId) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr();
 
     const activities = await this.pool.query(
       'SELECT activity_id FROM activity_progress WHERE user_id = $1 AND date = $2 AND completed = TRUE',
@@ -26,7 +33,7 @@ class ProgressRepositories {
   }
 
   async upsertActivityProgress(userId, activityId, completed) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr();
     await this.pool.query(`
       INSERT INTO activity_progress (id, user_id, date, activity_id, completed)
       VALUES ($1, $2, $3, $4, $5::boolean)
@@ -36,7 +43,7 @@ class ProgressRepositories {
   }
 
   async upsertFoodProgress(userId, foodId, consumed) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr();
     await this.pool.query(`
       INSERT INTO food_progress (id, user_id, date, food_id, consumed)
       VALUES ($1, $2, $3, $4, $5::boolean)
@@ -46,7 +53,7 @@ class ProgressRepositories {
   }
 
   async countCompletedActivitiesToday(userId) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr();
     const result = await this.pool.query(
       'SELECT COUNT(*) as count FROM activity_progress WHERE user_id = $1 AND date = $2 AND completed = TRUE',
       [userId, today]
@@ -55,7 +62,7 @@ class ProgressRepositories {
   }
 
   async countConsumedFoodsToday(userId) {
-    const today = new Date().toISOString().split('T')[0];
+    const today = toLocalDateStr();
     const result = await this.pool.query(
       'SELECT COUNT(*) as count FROM food_progress WHERE user_id = $1 AND date = $2 AND consumed = TRUE',
       [userId, today]
@@ -72,29 +79,28 @@ class ProgressRepositories {
   }
 
   async updateStreak(userId) {
-    const today = new Date().toISOString().split('T')[0];
 
+    const now = new Date();
+    const today = toLocalDateStr(now);
 
     const completedActivityCount = await this.countCompletedActivitiesToday(userId);
     const consumedFoodCount = await this.countConsumedFoodsToday(userId);
 
-    
-    // Streak hanya update jika 3 aktivitas selesai
     if (completedActivityCount < 3 || consumedFoodCount < 6) return;
 
     const streak = await this.getStreak(userId);
     console.log('current streak: ', streak);
 
     const lastDate = streak?.last_completed_date
-      ? new Date(streak.last_completed_date).toISOString().split('T')[0]
+      ? String(streak.last_completed_date).split('T')[0]
       : null;
 
     // Jika hari ini sudah dihitung, skip
     if (lastDate === today) return;
 
-    const yesterday = new Date();
-    yesterday.setDate(yesterday.getDate() - 1);
-    const yesterdayStr = yesterday.toISOString().split('T')[0];
+    const yesterdayDate = new Date(now);
+    yesterdayDate.setDate(yesterdayDate.getDate() - 1);
+    const yesterdayStr = toLocalDateStr(yesterdayDate);
 
     // Lanjut streak jika kemarin selesai, reset ke 1 jika tidak
     const newStreak = lastDate === yesterdayStr
@@ -111,6 +117,7 @@ class ProgressRepositories {
         updated_at          = NOW()
     `, [nanoid(16), userId, newStreak, today]);
     }
+    
 }
 
 export default new ProgressRepositories();
