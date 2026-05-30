@@ -92,7 +92,7 @@ class ProgressRepositories {
     console.log('current streak: ', streak);
 
     const lastDate = streak?.last_completed_date
-      ? String(streak.last_completed_date).split('T')[0]
+      ? toLocalDateStr(new Date(streak.last_completed_date))
       : null;
 
     // Jika hari ini sudah dihitung, skip
