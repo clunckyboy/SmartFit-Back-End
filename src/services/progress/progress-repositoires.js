@@ -10,7 +10,17 @@ function toLocalDateStr(date = new Date()) {
 
 class ProgressRepositories {
   constructor() {
-    this.pool = new Pool();
+    const dbUrl = process.env.DATABASE_URL || 'postgresql://postgres:12345678@localhost:5432/smartfit';
+
+    const isCloudDB = dbUrl.includes('neon.tech') || process.env.NODE_ENV === 'production';
+
+    const poolConfig = {
+      connectionString: dbUrl,
+    };
+
+    if (isCloudDB) poolConfig.ssl = { rejectUnauthorized: false };
+
+    this.pool = new Pool(poolConfig);
   }
 
   async getProgressToday(userId) {
